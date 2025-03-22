@@ -1,0 +1,24 @@
+# Compiled binaries
+go-crash
+*.exe
+
+# Build output
+build/
+
+# Temporary files
+*~
+*.swp
+*.tmp
+
+# Test files
+*.test
+*.out
+coverage.out
+
+# Editor/IDE files
+.vscode/
+.idea/
+
+# Logs and local config
+*.log
+.env
