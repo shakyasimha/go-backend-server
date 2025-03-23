@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -29,11 +31,11 @@ func connectDB() *gorm.DB {
 
 func TodoRoutes(router *gin.Engine, db *gorm.DB) {
 	// Routes go here
-	route := router.Group("/todo")
+	route := router.Group("/todos")
 
 	// APIs go here
 	// Route to create a new Todo
-	route.POST("/todo", func(c *gin.Context) {
+	route.POST("/todos", func(c *gin.Context) {
 		var todo Todo
 
 		if err := c.ShouldBindJSON(&todo); err != nil {
@@ -43,24 +45,89 @@ func TodoRoutes(router *gin.Engine, db *gorm.DB) {
 
 		// Save the Todo to db
 		if result := db.Create(&todo); result.Error != nil {
-			c.JSON(500, gin.H{"error": "Failed to create todo." + result.Error.Error()})
-			return 
+			c.JSON(500, gin.H{"error": "Failed to create todo: " + result.Error.Error()})
+			return
 		}
 
 		c.JSON(200, todo)
 	})
 
-	// Route to get all Todo 
-	route.GET("/todo", func(c *gin.Context) {
-		var todos []Todo 
-		
-		// Retrieve all Todos from database 
+	// Route to get all Todo
+	route.GET("/todos", func(c *gin.Context) {
+		var todos []Todo
+
+		// Retrieve all Todos from database
 		if result := db.Find(&todos); result.Error != nil {
-			c.JSON(500, gin.H{
-				"error": "Failed to retrieve todos: " + result.Error.Error()
-			})
+			c.JSON(500, gin.H{"error": "Failed to retrieve todos: " + result.Error.Error()})
+			return
 		}
 
 		c.JSON(200, todos)
+	})
+
+	// Router to get Todo by id
+	route.GET("/todos/:id", func(c *gin.Context) {
+		var todo Todo
+
+		// Getting id
+		id := c.Param("id")
+
+		// Retrieve data by id
+		if result := db.First(&todo, id); result.Error != nil {
+			if result.Error == gorm.ErrRecordNotFound {
+				c.JSON(404, gin.H{"error": "Todo not found."})
+			}
+			c.JSON(500, gin.H{"error": "Failed to retrieve todo: " + result.Error.Error()})
+			return
+		}
+
+		c.JSON(200, todo)
+	})
+
+	// Route to edit todo
+	router.PUT("/todos", func(c *gin.Context) {
+		var todo Todo
+		id := c.Param("id")
+
+		if result := db.First(&todo, id); result.Error != nil {
+			if result.Error == gorm.ErrRecordNotFound {
+				c.JSON(404, gin.H{"error": "Todo not found."})
+			}
+			c.JSON(500, gin.H{"error": "Failed to retrieve todo: " + result.Error.Error()})
+			return
+		}
+
+		var updatedTodo Todo
+		if err := c.ShouldBindJSON(&updatedTodo); err != nil {
+			c.JSON(400, gin.H{"error": "Invalid JSON data"})
+			return
+		}
+
+		// Update the todo in database
+		todo.Title = updatedTodo.Title
+		todo.Description = updatedTodo.Description
+
+		if result := db.Save(&todo); result.Error != nil {
+			c.JSON(500, gin.H{"error": "Failed to update todo: " + result.Error.Error()})
+			return
+		}
+
+		c.JSON(200, todo)
+	})
+
+	// Route to delete a Todo by ID
+	router.DELETE("/todos/:id", func(c *gin.Context) {
+		var todo Todo
+		id := c.Param("id")
+
+		// Retrieve todo from DB
+		if result := db.First(&todo, id); result.Error != nil {
+			c.JSON(404, gin.H{"error": "Todo not found."})
+			return
+		}
+
+		db.Delete(&todo)
+
+		c.JSON(200, gin.H{"message": fmt.Sprintf("Todo with ID %s is deleted.", id)})
 	})
 }
