@@ -7,6 +7,11 @@ import (
 
 func main() {
 	router := gin.Default()
+
+	router.GET("/", func(c *gin.Context) {
+		c.String(200, "Hello World")
+	})
+
 	routes.SetupRoutes(router)
 	router.Run(":8080")
 }

@@ -11,9 +11,9 @@ func (uc *UserController) GetUserInfo(c *gin.Context) {
 	userID := c.Param("id")
 
 	c.JSON(200, gin.H{
-		"id": userID, 
-		"name": "John Doe",
-		"email": "john@example.com"
+		"id":    userID,
+		"name":  "John Doe",
+		"email": "john@example.com",
 	})
 }
 
@@ -50,7 +50,7 @@ func SetupRoutes(router *gin.Engine) {
 	userRouter := router.Group("/users")
 	private.Use(middleware.LoggerMiddleware())
 	{
-		router.GET("/users/:id", userController.GetUserInfo)
+		userRouter.GET("/users/:id", userController.GetUserInfo)
 	}
 
 }
