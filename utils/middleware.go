@@ -1,4 +1,4 @@
-package middleware
+package utils
 
 import (
 	"log"
@@ -10,8 +10,8 @@ import (
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apikey := c.GetHeader("X-API-KEY")
-		if apikey == "" {
-			c.AbortWithStatusJSON(401, gin.H{"error": "API key is missing"})
+		if apikey != "secret-key" { // Example: require a specific key
+			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid or missing API key"})
 			return
 		}
 		c.Next()
