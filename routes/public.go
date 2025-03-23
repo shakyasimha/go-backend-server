@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"go-backend-server/utils" // Updated to match module
+	"github.com/shakyasimha/go-backend-server/utils" // Updated to match module
 
 	"github.com/gin-gonic/gin"
 )
