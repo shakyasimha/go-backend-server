@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/shakyasimha/go-backend-server/routes"
-	"github.com/shakyasimha/go-backend-server/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,12 +14,9 @@ func main() {
 		c.String(200, "Hello World")
 	})
 
-	// Database connection
-	db := utils.ConnectDB("todos.db")
-
 	// Set up routes
 	routes.SetupRoutes(router)
-	routes.TodoRoutes(router, db)
+	routes.TodoRoutes(router)
 
 	// Run server
 	router.Run(":8080")

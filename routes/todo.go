@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -11,12 +12,30 @@ type Todo struct {
 	Description string `json:"description"`
 }
 
-func TodoRoutes(router *gin.Engine, db *gorm.DB) {
+func ConnectDB() *gorm.DB {
+	db, err := gorm.Open(sqlite.Open("todos.db"), &gorm.Config{})
+	if err != nil {
+		panic("Failed to connect to database: " + err.Error())
+	}
+
+	// Migrate the Todo model to create the todos table
+	if err := db.AutoMigrate(&Todo{}); err != nil {
+		panic("Failed to automigrate Todo table: " + err.Error())
+	}
+	return db
+}
+
+func TodoRoutes(router *gin.Engine) {
+	// Connecting DB
+	db := ConnectDB()
+
+	// Declaring route group here
 	route := router.Group("/todos")
 
 	// Create
 	route.POST("/", func(c *gin.Context) {
 		var todo Todo
+
 		if err := c.ShouldBindJSON(&todo); err != nil {
 			c.JSON(400, gin.H{"error": "Invalid JSON data"})
 			return
