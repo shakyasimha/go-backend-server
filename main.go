@@ -15,7 +15,7 @@ func main() {
 	})
 
 	// Set up routes
-	routes.SetupRoutes(router)
+	routes.UserRoutes(router)
 	routes.TodoRoutes(router)
 
 	// Run server

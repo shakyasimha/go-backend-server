@@ -3,25 +3,29 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/shakyasimha/go-backend-server/models"
+	"github.com/shakyasimha/go-backend-server/utils"
 	"gorm.io/gorm"
 )
 
 func TodoRoutes(router *gin.Engine) {
-	// Connecting DB
 	todo := models.NewTodo()
 	db := todo.ConnectDB()
 
-	// Declaring route group here
-	route := router.Group("/todos")
+	// Apply BasicAuthMiddleware to all /todos routes
+	route := router.Group("/todos", utils.AuthMiddleware(db))
 
 	// Create
 	route.POST("/", func(c *gin.Context) {
 		var todo models.Todo
-
 		if err := c.ShouldBindJSON(&todo); err != nil {
 			c.JSON(400, gin.H{"error": "Invalid JSON data"})
 			return
 		}
+
+		// Set UserID from authenticated user
+		userID, _ := c.Get("user_id")
+		todo.UserID = userID.(uint)
+
 		if result := db.Create(&todo); result.Error != nil {
 			c.JSON(500, gin.H{"error": "Failed to create todo: " + result.Error.Error()})
 			return
@@ -29,25 +33,25 @@ func TodoRoutes(router *gin.Engine) {
 		c.JSON(200, todo)
 	})
 
-	// List
+	// List (only user's todos)
 	route.GET("/", func(c *gin.Context) {
-		todos := []models.Todo{}
-
-		if result := db.Find(&todos); result.Error != nil {
+		var todos []models.Todo
+		userID, _ := c.Get("user_id")
+		if result := db.Where("user_id = ?", userID).Find(&todos); result.Error != nil {
 			c.JSON(500, gin.H{"error": "Failed to retrieve todos: " + result.Error.Error()})
 			return
 		}
 		c.JSON(200, todos)
 	})
 
-	// Get by ID
+	// Get by ID (only if owned by user)
 	route.GET("/:id", func(c *gin.Context) {
-		todo := models.NewTodo()
-
+		var todo models.Todo
 		id := c.Param("id")
-		if result := db.First(&todo, id); result.Error != nil {
+		userID, _ := c.Get("user_id")
+		if result := db.Where("user_id = ?", userID).First(&todo, id); result.Error != nil {
 			if result.Error == gorm.ErrRecordNotFound {
-				c.JSON(404, gin.H{"error": "Todo not found"})
+				c.JSON(404, gin.H{"error": "Todo not found or not yours"})
 				return
 			}
 			c.JSON(500, gin.H{"error": "Failed to retrieve todo: " + result.Error.Error()})
@@ -56,21 +60,21 @@ func TodoRoutes(router *gin.Engine) {
 		c.JSON(200, todo)
 	})
 
-	// Update
+	// Update (only if owned by user)
 	route.PUT("/:id", func(c *gin.Context) {
-		todo := models.NewTodo()
-
+		var todo models.Todo
 		id := c.Param("id")
-		if result := db.First(&todo, id); result.Error != nil {
+		userID, _ := c.Get("user_id")
+		if result := db.Where("user_id = ?", userID).First(&todo, id); result.Error != nil {
 			if result.Error == gorm.ErrRecordNotFound {
-				c.JSON(404, gin.H{"error": "Todo not found"})
+				c.JSON(404, gin.H{"error": "Todo not found or not yours"})
 				return
 			}
 			c.JSON(500, gin.H{"error": "Failed to retrieve todo: " + result.Error.Error()})
 			return
 		}
 
-		updatedTodo := models.Todo{}
+		var updatedTodo models.Todo
 		if err := c.ShouldBindJSON(&updatedTodo); err != nil {
 			c.JSON(400, gin.H{"error": "Invalid JSON data"})
 			return
@@ -85,16 +89,20 @@ func TodoRoutes(router *gin.Engine) {
 		c.JSON(200, todo)
 	})
 
-	// Delete
+	// Delete (only if owned by user)
 	route.DELETE("/:id", func(c *gin.Context) {
-		todo := models.NewTodo()
-
+		var todo models.Todo
 		id := c.Param("id")
-		if result := db.First(&todo, id); result.Error != nil {
-			c.JSON(404, gin.H{"error": "Todo not found"})
+		userID, _ := c.Get("user_id")
+		if result := db.Where("user_id = ?", userID).First(&todo, id); result.Error != nil {
+			if result.Error == gorm.ErrRecordNotFound {
+				c.JSON(404, gin.H{"error": "Todo not found or not yours"})
+				return
+			}
+			c.JSON(500, gin.H{"error": "Failed to retrieve todo: " + result.Error.Error()})
 			return
 		}
 		db.Delete(&todo)
-		c.JSON(200, gin.H{"message": "Todo with ID " + id + " is deleted"})
+		c.JSON(200, gin.H{"message": "Todo with ID " + id + " deleted"})
 	})
 }

@@ -12,6 +12,11 @@ type User struct {
 	Email    string `json:"email"`
 }
 
+type Input struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 // Pseudoconstructor
 func NewUser() *User {
 	return &User{}
