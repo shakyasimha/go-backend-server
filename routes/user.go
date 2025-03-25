@@ -1,12 +1,13 @@
+// routes/user.go
 package routes
 
 import (
-	"encoding/base64"
-	"strings"
-
 	"github.com/gin-gonic/gin"
+
 	"github.com/shakyasimha/go-backend-server/models"
 	"github.com/shakyasimha/go-backend-server/utils"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func UserRoutes(router *gin.Engine) {
@@ -15,7 +16,6 @@ func UserRoutes(router *gin.Engine) {
 
 	route := router.Group("/users")
 
-	// POST /users/signup - unchanged
 	route.POST("/signup", func(c *gin.Context) {
 		var user models.User
 		if err := c.ShouldBindJSON(&user); err != nil {
@@ -26,41 +26,40 @@ func UserRoutes(router *gin.Engine) {
 			c.JSON(500, gin.H{"error": "Failed to create user: " + results.Error.Error()})
 			return
 		}
-		c.JSON(201, gin.H{"id": user.ID, "username": user.Username, "email": user.Email})
+		token, err := utils.GenerateToken(user.ID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Failed to generate token"})
+			return
+		}
+		c.JSON(201, gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+			"email":    user.Email,
+			"token":    token,
+		})
 	})
 
-	// POST /users/login
 	route.POST("/login", func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if !strings.HasPrefix(authHeader, "Basic ") {
-			c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
-			c.JSON(401, gin.H{"error": "Missing or invalid Authorization header"})
-			return
-		}
-
-		creds, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(authHeader, "Basic "))
-		if err != nil {
-			c.JSON(400, gin.H{"error": "Invalid Base64 encoding"})
-			return
-		}
-
-		// Fix: Handle all 3 return values
-		username, password, err := utils.SplitCredentials(string(creds))
-		if err != nil || username == "" || password == "" {
-			c.JSON(400, gin.H{"error": "Invalid credentials format"})
+		var input models.Input
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(400, gin.H{"error": "Invalid JSON data"})
 			return
 		}
 
 		var user models.User
-		if result := db.Where("username = ?", username).First(&user); result.Error != nil {
-			c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
+		if result := db.Where("username = ?", input.Username).First(&user); result.Error != nil {
 			c.JSON(401, gin.H{"error": "Invalid username or password"})
 			return
 		}
 
-		if user.Password != password { // Insecure; use bcrypt in production
-			c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
+		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
 			c.JSON(401, gin.H{"error": "Invalid username or password"})
+			return
+		}
+
+		token, err := utils.GenerateToken(user.ID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Failed to generate token"})
 			return
 		}
 
@@ -69,6 +68,7 @@ func UserRoutes(router *gin.Engine) {
 			"user_id":  user.ID,
 			"username": user.Username,
 			"email":    user.Email,
+			"token":    token,
 		})
 	})
 }
