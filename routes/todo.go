@@ -22,9 +22,20 @@ func TodoRoutes(router *gin.Engine) {
 			return
 		}
 
-		// Set UserID from authenticated user
-		userID, _ := c.Get("user_id")
-		todo.UserID = userID.(uint)
+		// Safely get and assert user_id as uint
+		userID, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(500, gin.H{"error": "User ID not found in context"})
+			return
+		}
+
+		uid, ok := userID.(uint)
+		if !ok {
+			c.JSON(500, gin.H{"error": "User ID is not a uint"})
+			return
+		}
+
+		todo.UserID = uid
 
 		if result := db.Create(&todo); result.Error != nil {
 			c.JSON(500, gin.H{"error": "Failed to create todo: " + result.Error.Error()})
@@ -36,8 +47,17 @@ func TodoRoutes(router *gin.Engine) {
 	// List (only user's todos)
 	route.GET("/", func(c *gin.Context) {
 		var todos []models.Todo
-		userID, _ := c.Get("user_id")
-		if result := db.Where("user_id = ?", userID).Find(&todos); result.Error != nil {
+		userID, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(500, gin.H{"error": "User ID not found in context"})
+			return
+		}
+		uid, ok := userID.(uint)
+		if !ok {
+			c.JSON(500, gin.H{"error": "User ID is not a uint"})
+			return
+		}
+		if result := db.Where("user_id = ?", uid).Find(&todos); result.Error != nil {
 			c.JSON(500, gin.H{"error": "Failed to retrieve todos: " + result.Error.Error()})
 			return
 		}
@@ -48,8 +68,17 @@ func TodoRoutes(router *gin.Engine) {
 	route.GET("/:id", func(c *gin.Context) {
 		var todo models.Todo
 		id := c.Param("id")
-		userID, _ := c.Get("user_id")
-		if result := db.Where("user_id = ?", userID).First(&todo, id); result.Error != nil {
+		userID, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(500, gin.H{"error": "User ID not found in context"})
+			return
+		}
+		uid, ok := userID.(uint)
+		if !ok {
+			c.JSON(500, gin.H{"error": "User ID is not a uint"})
+			return
+		}
+		if result := db.Where("user_id = ?", uid).First(&todo, id); result.Error != nil {
 			if result.Error == gorm.ErrRecordNotFound {
 				c.JSON(404, gin.H{"error": "Todo not found or not yours"})
 				return
@@ -64,8 +93,17 @@ func TodoRoutes(router *gin.Engine) {
 	route.PUT("/:id", func(c *gin.Context) {
 		var todo models.Todo
 		id := c.Param("id")
-		userID, _ := c.Get("user_id")
-		if result := db.Where("user_id = ?", userID).First(&todo, id); result.Error != nil {
+		userID, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(500, gin.H{"error": "User ID not found in context"})
+			return
+		}
+		uid, ok := userID.(uint)
+		if !ok {
+			c.JSON(500, gin.H{"error": "User ID is not a uint"})
+			return
+		}
+		if result := db.Where("user_id = ?", uid).First(&todo, id); result.Error != nil {
 			if result.Error == gorm.ErrRecordNotFound {
 				c.JSON(404, gin.H{"error": "Todo not found or not yours"})
 				return
@@ -93,8 +131,17 @@ func TodoRoutes(router *gin.Engine) {
 	route.DELETE("/:id", func(c *gin.Context) {
 		var todo models.Todo
 		id := c.Param("id")
-		userID, _ := c.Get("user_id")
-		if result := db.Where("user_id = ?", userID).First(&todo, id); result.Error != nil {
+		userID, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(500, gin.H{"error": "User ID not found in context"})
+			return
+		}
+		uid, ok := userID.(uint)
+		if !ok {
+			c.JSON(500, gin.H{"error": "User ID is not a uint"})
+			return
+		}
+		if result := db.Where("user_id = ?", uid).First(&todo, id); result.Error != nil {
 			if result.Error == gorm.ErrRecordNotFound {
 				c.JSON(404, gin.H{"error": "Todo not found or not yours"})
 				return

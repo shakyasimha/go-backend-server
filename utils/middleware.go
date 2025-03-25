@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"log"
 	"time"
 
@@ -8,15 +9,13 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+
 	"github.com/shakyasimha/go-backend-server/models"
-	"github.com/shakyasimha/go-backend-server/utils"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user := models.User{}
-		db := user.ConnectDB()
-
 		authHeader := c.GetHeader("Authorization")
 		if !strings.HasPrefix(authHeader, "Basic ") {
 			c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
@@ -33,14 +32,15 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		username, password := utils.SplitCredentials(string(creds))
-		if username == "" || password == "" {
+		username, password, err := SplitCredentials(string(creds))
+		if err != nil {
 			c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
-			c.JSON(401, gin.H{"error": "Invalid credentials format"})
+			c.JSON(401, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}
 
+		var user models.User
 		if result := db.Where("username = ?", username).First(&user); result.Error != nil {
 			c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
 			c.JSON(401, gin.H{"error": "Invalid username or password"})
@@ -55,7 +55,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Set user_id in context for use in routes
+		// Set user_id as uint (from gorm.Model.ID)
 		c.Set("user_id", user.ID)
 		c.Next()
 	}
@@ -68,4 +68,16 @@ func LoggerMiddleware() gin.HandlerFunc {
 		duration := time.Since(start)
 		log.Printf("Request - Method: %s | Status: %d | Duration: %v", c.Request.Method, c.Writer.Status(), duration)
 	}
+}
+
+// Helper function to split username:password
+func SplitCredentials(creds string) (username, password string, err error) {
+	if creds == "" {
+		return "", "", errors.New("credentials string is empty")
+	}
+	parts := strings.SplitN(creds, ":", 2)
+	if len(parts) != 2 {
+		return "", "", errors.New("invalid credentials format: expected 'username:password'")
+	}
+	return parts[0], parts[1], nil
 }
