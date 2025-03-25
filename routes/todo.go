@@ -2,39 +2,21 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/sqlite"
+	"github.com/shakyasimha/go-backend-server/models"
 	"gorm.io/gorm"
 )
 
-type Todo struct {
-	gorm.Model
-	Title       string `json:"title"`
-	Description string `json:"description"`
-}
-
-func ConnectDB() *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("todos.db"), &gorm.Config{})
-	if err != nil {
-		panic("Failed to connect to database: " + err.Error())
-	}
-
-	// Migrate the Todo model to create the todos table
-	if err := db.AutoMigrate(&Todo{}); err != nil {
-		panic("Failed to automigrate Todo table: " + err.Error())
-	}
-	return db
-}
-
 func TodoRoutes(router *gin.Engine) {
 	// Connecting DB
-	db := ConnectDB()
+	todo := models.NewTodo()
+	db := todo.ConnectDB()
 
 	// Declaring route group here
 	route := router.Group("/todos")
 
 	// Create
 	route.POST("/", func(c *gin.Context) {
-		var todo Todo
+		var todo models.Todo
 
 		if err := c.ShouldBindJSON(&todo); err != nil {
 			c.JSON(400, gin.H{"error": "Invalid JSON data"})
@@ -49,7 +31,8 @@ func TodoRoutes(router *gin.Engine) {
 
 	// List
 	route.GET("/", func(c *gin.Context) {
-		var todos []Todo
+		todos := []models.Todo{}
+
 		if result := db.Find(&todos); result.Error != nil {
 			c.JSON(500, gin.H{"error": "Failed to retrieve todos: " + result.Error.Error()})
 			return
@@ -59,7 +42,8 @@ func TodoRoutes(router *gin.Engine) {
 
 	// Get by ID
 	route.GET("/:id", func(c *gin.Context) {
-		var todo Todo
+		todo := models.NewTodo()
+
 		id := c.Param("id")
 		if result := db.First(&todo, id); result.Error != nil {
 			if result.Error == gorm.ErrRecordNotFound {
@@ -74,7 +58,8 @@ func TodoRoutes(router *gin.Engine) {
 
 	// Update
 	route.PUT("/:id", func(c *gin.Context) {
-		var todo Todo
+		todo := models.NewTodo()
+
 		id := c.Param("id")
 		if result := db.First(&todo, id); result.Error != nil {
 			if result.Error == gorm.ErrRecordNotFound {
@@ -84,11 +69,13 @@ func TodoRoutes(router *gin.Engine) {
 			c.JSON(500, gin.H{"error": "Failed to retrieve todo: " + result.Error.Error()})
 			return
 		}
-		var updatedTodo Todo
+
+		updatedTodo := models.Todo{}
 		if err := c.ShouldBindJSON(&updatedTodo); err != nil {
 			c.JSON(400, gin.H{"error": "Invalid JSON data"})
 			return
 		}
+
 		todo.Title = updatedTodo.Title
 		todo.Description = updatedTodo.Description
 		if result := db.Save(&todo); result.Error != nil {
@@ -100,7 +87,8 @@ func TodoRoutes(router *gin.Engine) {
 
 	// Delete
 	route.DELETE("/:id", func(c *gin.Context) {
-		var todo Todo
+		todo := models.NewTodo()
+
 		id := c.Param("id")
 		if result := db.First(&todo, id); result.Error != nil {
 			c.JSON(404, gin.H{"error": "Todo not found"})
