@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/shakyasimha/go-backend-server/models"
 	"github.com/shakyasimha/go-backend-server/utils"
@@ -11,7 +13,6 @@ func TodoRoutes(router *gin.Engine) {
 	todo := models.NewTodo()
 	db := todo.ConnectDB()
 
-	// Apply BasicAuthMiddleware to all /todos routes
 	route := router.Group("/todos", utils.AuthMiddleware(db))
 
 	// Create
@@ -22,7 +23,6 @@ func TodoRoutes(router *gin.Engine) {
 			return
 		}
 
-		// Safely get and assert user_id as uint
 		userID, exists := c.Get("user_id")
 		if !exists {
 			c.JSON(500, gin.H{"error": "User ID not found in context"})
@@ -35,7 +35,8 @@ func TodoRoutes(router *gin.Engine) {
 			return
 		}
 
-		todo.UserID = uid
+		// Fix: Convert uint to string
+		todo.UserID = strconv.FormatUint(uint64(uid), 10)
 
 		if result := db.Create(&todo); result.Error != nil {
 			c.JSON(500, gin.H{"error": "Failed to create todo: " + result.Error.Error()})
@@ -48,6 +49,7 @@ func TodoRoutes(router *gin.Engine) {
 	route.GET("/", func(c *gin.Context) {
 		var todos []models.Todo
 		userID, exists := c.Get("user_id")
+
 		if !exists {
 			c.JSON(500, gin.H{"error": "User ID not found in context"})
 			return
@@ -57,7 +59,8 @@ func TodoRoutes(router *gin.Engine) {
 			c.JSON(500, gin.H{"error": "User ID is not a uint"})
 			return
 		}
-		if result := db.Where("user_id = ?", uid).Find(&todos); result.Error != nil {
+		// Convert uid to string for query
+		if result := db.Where("user_id = ?", strconv.FormatUint(uint64(uid), 10)).Find(&todos); result.Error != nil {
 			c.JSON(500, gin.H{"error": "Failed to retrieve todos: " + result.Error.Error()})
 			return
 		}

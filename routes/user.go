@@ -15,7 +15,7 @@ func UserRoutes(router *gin.Engine) {
 
 	route := router.Group("/users")
 
-	// POST /users/signup - Create a new user
+	// POST /users/signup - unchanged
 	route.POST("/signup", func(c *gin.Context) {
 		var user models.User
 		if err := c.ShouldBindJSON(&user); err != nil {
@@ -29,7 +29,7 @@ func UserRoutes(router *gin.Engine) {
 		c.JSON(201, gin.H{"id": user.ID, "username": user.Username, "email": user.Email})
 	})
 
-	// POST /users/login - Optional login endpoint for Basic Auth validation
+	// POST /users/login
 	route.POST("/login", func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if !strings.HasPrefix(authHeader, "Basic ") {
@@ -44,8 +44,9 @@ func UserRoutes(router *gin.Engine) {
 			return
 		}
 
-		username, password := utils.SplitCredentials(string(creds))
-		if username == "" || password == "" {
+		// Fix: Handle all 3 return values
+		username, password, err := utils.SplitCredentials(string(creds))
+		if err != nil || username == "" || password == "" {
 			c.JSON(400, gin.H{"error": "Invalid credentials format"})
 			return
 		}
