@@ -16,6 +16,7 @@ var jwtSecret = []byte("your-secret-key") // Use env variable in production
 func AuthMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
+
 		if !strings.HasPrefix(authHeader, "Bearer ") {
 			c.JSON(401, gin.H{"error": "Missing or invalid Authorization header"})
 			c.Abort()
@@ -23,6 +24,7 @@ func AuthMiddleware(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+
 		token, err := jwt.ParseWithClaims(tokenStr, &jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
@@ -38,11 +40,13 @@ func AuthMiddleware(db *gorm.DB) gin.HandlerFunc {
 
 		if claims, ok := token.Claims.(*jwt.MapClaims); ok && token.Valid {
 			userIDFloat, ok := (*claims)["user_id"].(float64) // JWT stores numbers as float64
+
 			if !ok {
 				c.JSON(401, gin.H{"error": "Invalid user_id in token"})
 				c.Abort()
 				return
 			}
+
 			userID := uint(userIDFloat)
 			c.Set("user_id", userID)
 			c.Next()
@@ -58,6 +62,7 @@ func LoggerMiddleware() gin.HandlerFunc {
 		start := time.Now()
 		c.Next()
 		duration := time.Since(start)
+
 		log.Printf("Request - Method: %s | Status: %d | Duration: %v",
 			c.Request.Method, c.Writer.Status(), duration)
 	}
@@ -68,6 +73,7 @@ func GenerateToken(userID uint) (string, error) {
 		"user_id": userID,
 		"exp":     time.Now().Add(time.Hour * 24).Unix(), // 24-hour expiration
 	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret)
 }

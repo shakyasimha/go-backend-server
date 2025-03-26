@@ -14,6 +14,7 @@ type User struct {
 	Email    string `json:"email"`
 }
 
+// Input struct is used for validating a user during authentication / login
 type Input struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -25,9 +26,11 @@ func NewUser() *User {
 
 func (u *User) ConnectDB() *gorm.DB {
 	db, err := gorm.Open(sqlite.Open("sqlite3.db"), &gorm.Config{})
+
 	if err != nil {
 		panic("Failed to connect to database: " + err.Error())
 	}
+
 	if err := db.AutoMigrate(&User{}); err != nil {
 		panic("Failed to automigrate User table: " + err.Error())
 	}
@@ -40,6 +43,7 @@ func (u *User) BeforeSave(tx *gorm.DB) (err error) {
 		if err != nil {
 			return err
 		}
+
 		u.Password = string(hashedPassword)
 	}
 	return nil

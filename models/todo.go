@@ -19,11 +19,13 @@ func NewTodo() *Todo {
 
 func (t *Todo) ConnectDB() *gorm.DB {
 	db, err := gorm.Open(sqlite.Open("sqlite3.db"), &gorm.Config{})
+
 	if err != nil {
 		panic("Failed to connect to database: " + err.Error())
 	}
 	if err := db.AutoMigrate(&Todo{}); err != nil {
 		panic("Failed to automigrate Todo table: " + err.Error())
 	}
+
 	return db
 }

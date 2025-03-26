@@ -16,6 +16,7 @@ func TodoRoutes(router *gin.Engine) {
 
 	route.POST("/", func(c *gin.Context) {
 		var todo models.Todo
+
 		if err := c.ShouldBindJSON(&todo); err != nil {
 			c.JSON(400, gin.H{"error": "Invalid JSON data"})
 			return
@@ -33,7 +34,9 @@ func TodoRoutes(router *gin.Engine) {
 
 	route.GET("/", func(c *gin.Context) {
 		var todos []models.Todo
+
 		userID, _ := c.Get("user_id")
+
 		if result := db.Where("user_id = ?", userID).Find(&todos); result.Error != nil {
 			c.JSON(500, gin.H{"error": "Failed to retrieve todos: " + result.Error.Error()})
 			return
@@ -43,8 +46,10 @@ func TodoRoutes(router *gin.Engine) {
 
 	route.GET("/:id", func(c *gin.Context) {
 		var todo models.Todo
+
 		id := c.Param("id")
 		userID, _ := c.Get("user_id")
+
 		if result := db.Where("user_id = ?", userID).First(&todo, id); result.Error != nil {
 			if result.Error == gorm.ErrRecordNotFound {
 				c.JSON(404, gin.H{"error": "Todo not found or not yours"})
@@ -58,8 +63,10 @@ func TodoRoutes(router *gin.Engine) {
 
 	route.PUT("/:id", func(c *gin.Context) {
 		var todo models.Todo
+
 		id := c.Param("id")
 		userID, _ := c.Get("user_id")
+
 		if result := db.Where("user_id = ?", userID).First(&todo, id); result.Error != nil {
 			if result.Error == gorm.ErrRecordNotFound {
 				c.JSON(404, gin.H{"error": "Todo not found or not yours"})
@@ -70,6 +77,7 @@ func TodoRoutes(router *gin.Engine) {
 		}
 
 		var updatedTodo models.Todo
+
 		if err := c.ShouldBindJSON(&updatedTodo); err != nil {
 			c.JSON(400, gin.H{"error": "Invalid JSON data"})
 			return
@@ -77,6 +85,7 @@ func TodoRoutes(router *gin.Engine) {
 
 		todo.Title = updatedTodo.Title
 		todo.Description = updatedTodo.Description
+
 		if result := db.Save(&todo); result.Error != nil {
 			c.JSON(500, gin.H{"error": "Failed to update todo: " + result.Error.Error()})
 			return
@@ -86,8 +95,10 @@ func TodoRoutes(router *gin.Engine) {
 
 	route.DELETE("/:id", func(c *gin.Context) {
 		var todo models.Todo
+
 		id := c.Param("id")
 		userID, _ := c.Get("user_id")
+
 		if result := db.Where("user_id = ?", userID).First(&todo, id); result.Error != nil {
 			if result.Error == gorm.ErrRecordNotFound {
 				c.JSON(404, gin.H{"error": "Todo not found or not yours"})
@@ -96,6 +107,7 @@ func TodoRoutes(router *gin.Engine) {
 			}
 			return
 		}
+
 		db.Delete(&todo)
 		c.JSON(200, gin.H{"message": "Todo with ID " + id + " deleted"})
 	})
